@@ -1,0 +1,95 @@
+
+
+class SILOWNIK
+    state x`
+        double K = 1.0 / @Totw;
+        x` = K * @U;
+    state x# = Limit(x#, 0, 1);
+    output y = x + @U;
+
+raw DELAY
+    fields
+        double @@tab_s[(int)(@T/dt)];
+        int @@first_s;
+        int @@last_s;
+    restore
+        double* @@tab = state.@@tab_s;
+        int @@first = state.@@first_s;
+        int @@last = state.@@last_s;
+    save
+        state.@@tab_s = @@tab;
+        state.@@first_s = @@first;
+        state.@@last_s = @@last;
+    output y
+        y = @tab.last;
+    next
+        @tab.pop_last();
+        @tab.push_first(@U);
+
+class INER1RZ
+    default @K = 1.0;
+    default @_Tpol2K_ = 0.123456789;
+    state @x` = (1.0 / @Tpol) * @_Tpol2K_ * (@U - @x);
+    output @y = @K * @x;
+
+class ADD
+    output y = @U1 + @U2;
+
+sub PIEC
+    INER1RZ
+        Tpol = { 20 * 60}
+        U = ADD
+            U1 = @Uon
+            U2 = @Upowr
+    DELAY
+        T = { 2 * 60 }
+        U = INER1RZ
+    output y = DELAY
+
+
+SILOWNIK
+    Totw = { 120 }
+    U = OTW_ZAM
+
+// restore state
+SILOWNIK_x = state[23];
+
+// calc signals
+{
+    const double Totw = 120;
+    double U = OTW_ZAM_y;
+    double y = x;
+    SILOWNIK_y = y;
+}
+
+// calc next
+{
+    const double Totw = 120;
+    double U = OTW_ZAM_y;
+    double x__det;
+    double x__next;
+    x__det = (1.0 / Totw) * U;
+    x__next = x__next + x__det * dt;
+    x__next = Limit(x__next, 0, 1);
+    SILOWNIK_x__next = x__next;
+}
+
+// apply next state
+SILOWNIK_x = SILOWNIK_x__next;
+
+// store state
+state[23] = SILOWNIK_x;
+
+ZAWOR
+    Uz = SILOWNIK
+    Uotw = SPRZEGLO
+    Uzam = PIEC.wyjscie
+
+----- -lub 
+
+ZAWOR
+    Uz = SILOWNIK
+        Totw = { 120 }
+        U = OTW_ZAM
+    Uotw = SPRZEGLO
+    Uzam = PIEC.wyjscie
