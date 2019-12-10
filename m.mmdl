@@ -1,4 +1,23 @@
 
+class scope
+    struct Scope* @obj;
+    init
+        @obj = scopeCreate(@name);
+    fini
+        scopeDelete(@obj);
+    local const char* @name;
+    default @name = "Scope"; // TODO: special type for 'default' (do not add local if already added).
+    default @X1 = scopeEmptyValue();
+    default @X2 = scopeEmptyValue();
+    default @X3 = scopeEmptyValue();
+    default @X4 = scopeEmptyValue();
+    default @X5 = scopeEmptyValue();
+    default @Y = scopeEmptyValue();
+    provides always
+        // TODO: provides always
+        // TODO: provides init, fini
+        scopeAdd(@obj, state.time, @Y, @X1, @X2, @X3, @X4, @X5);
+
 
 model some
     class aaas
@@ -8,11 +27,22 @@ model some
 
     class int
         output @Y = getInput();
-        provides @_dummy
+        provides always
             setOutput(@X);
 
+    signal sig
     aaas
-    ##    U = int.Y
+        U = int.Y
+        y => int.X
+        w => sig
     
     ##int
-    ##    X = aaas.y
+        X = aaas.y
+        Z = sig
+    
+    scope
+        name = ("sig vs int.X")
+        X1 = sig
+        X2 = int.X
+        ' OR
+        Xn = (scopeCombine(2, @sig, @int.X))
