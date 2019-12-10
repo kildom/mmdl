@@ -1,18 +1,3 @@
 
-
-model some
-    class aaas
-        state @x` = @U - @x;
-        state @x# = range(@x#);
-        output @y = @x;
-
-    class int
-        output @Y = getInput();
-        provides @_dummy
-            setOutput(@X);
-
-    aaas
-    ##    U = int.Y
-    
-    ##int
-    ##    X = aaas.y
+class Test
+    output @x = 12;

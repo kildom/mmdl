@@ -1,4 +1,16 @@
 
+const { Parser } = require('./parser.js');
+const { Model } = require('./model.js');
+
+let p = new Parser();
+p.parse('./m.mmdl');
+let m = new Model(p.getRoot(), 'ROOT');
+console.log(JSON.stringify(m, null, 4));
+
+process.exit();
+
+if (0) {
+
 const fs = require('fs');
 
 function parseFile(file, root)
@@ -74,6 +86,10 @@ function explodeNames(entry, namesStr)
     return list;
 }
 
+function addPrefix(prefix, obj)
+{
+    return JSON.parse(JSON.stringify(obj).replace(/@/g, `@${prefix}`));
+}
 
 class MmdlError extends Error
 {
@@ -145,6 +161,14 @@ class items:
     parseSub(sub)
     {
         let m;
+        let patterns = [
+            [ /^struct\s+(.+)$/,
+                (e) => this.addStructField(e, e.constructCode(e[1])) ],
+            [ /^struct$/,
+                (e) => this.addStructField(e, e.constructCode()) ]
+            [ /.*/,
+                (e) => { throw new MmdlError(e, "Syntax error."); } ]
+        ];
         for (let entry of sub)
         {
             if ((m = entry.text.match(/^struct\s+(.+)$/)))
@@ -263,7 +287,7 @@ class items:
     addExpression(entry, provides, overrides, code)
     {
         let requires = {};
-        code.replace(/(@[a-zA-Z0-9_]+)/g, id => { requires[id] = true; });
+        code.replace(/(@[a-zA-Z0-9_]+[#`]?)/g, id => { requires[id] = true; });
         for (let p of provides) delete requires[p];
         for (let p of overrides) delete requires[p];
         let exp = {
@@ -282,7 +306,14 @@ class items:
 
     addPrefix(prefix)
     {
-        
+        this.struct = addPrefix(prefix, this.struct);
+        this.local = addPrefix(prefix, this.local);
+        this.restore = addPrefix(prefix, this.restore);
+        this.store = addPrefix(prefix, this.store);
+        this.finalize = addPrefix(prefix, this.finalize);
+        this.expressions = addPrefix(prefix, this.expressions);
+        this.fieldNames = addPrefix(prefix, this.fieldNames);
+        this.localNames = addPrefix(prefix, this.localNames);
     }
 };
 
@@ -296,6 +327,7 @@ class Model
         this.name = name;
         this.parent = parent;
         this.classes = {};
+        this.objects = {};
         this.parseSub(modelEntry.sub);
     }
 
@@ -321,7 +353,9 @@ class Model
     {
         let cls = this.findClass(entry, className);
         let obj = Object.create(cls);
-        obj.addPrefix(name);
+        obj.addPrefix(`${name}__`);
+        obj.setInstanceEntry(entry);
+        this.objects[name] = obj;
     }
 
     findClass(entry, className)
@@ -338,31 +372,9 @@ class Model
 }
 
 
-function createStructure(root)
-{
-    let classes = {};
-    for (let entry of root.sub)
-    {
-        if ((m = entry.text.match(/^class\s+([a-zA-Z0-9_]+)$/)))
-        {
-            classes[m[1]] = new Class(entry, m[1]);
-        }
-        else if ((m = entry.text.match(/^model\s+([a-zA-Z0-9_]+)$/)))
-        {
-            classes[m[1]] = new Model(entry, m[1]);
-        }
-        else
-        {
-            throw new MmdlError(entry, 'Unknown top level entry!');
-        }
-    }
-    return {
-        classes: classes
-    };
-}
 
 let root = {};
-parseFile('../m.mmdl', root);
+parseFile('./m.mmdl', root);
 //console.log(JSON.stringify(root, null, 4));
 console.log(JSON.stringify(new Model(root, 'mmdl', null), null, 4));
 
@@ -509,3 +521,5 @@ class {name}
         {name}` = C expression
 
 */
+
+}
