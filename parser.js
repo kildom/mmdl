@@ -26,18 +26,20 @@ class Entry
     
     constructCode(inlineCode)
     {
+        let code;
         if (inlineCode)
         {
             if (this.sub.length)
                 throw new MmdlError(this.sub[0], 'Code already provided.');
-            return `${inlineCode};\r\n`;
+            code = inlineCode;
         }
         else
         {
             if (this.sub.length == 0)
                 throw new MmdlError(this, 'No code provided.');
-            return this.getInnerCode();
+            code = this.getInnerCode();
         }
+        return code.trim().replace(/;*$/, ";\r\n");
     }
 
     match(pattern)

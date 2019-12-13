@@ -14,49 +14,60 @@ class Class extends Template
     {
         let patterns = [
             [ /^struct$/,
-                (e) => this.addVariable(e, e.constructCode(), LocationType.Struct) ],
+                e => this.addVariable(e, LocationType.Struct) ],
             [ /^struct\s+(.+)$/,
-                (e) => this.addVariable(e, e.constructCode(e[1]), LocationType.Struct) ],
+                e => this.addVariable(e, LocationType.Struct, e[1]) ],
+
             [ /^local$/,
-                (e) => this.addVariable(e, e.constructCode(), LocationType.Local) ],
+                e => this.addVariable(e, LocationType.Local) ],
             [ /^local\s+(.+)$/,
-                (e) => this.addVariable(e, e.constructCode(e[1]), LocationType.Local) ],
+                e => this.addVariable(e, LocationType.Local, e[1]) ],
+
             [ /^output\s+([a-zA-Z0-9_,\s@]+)$/,
-                (e) => this.addOutput(e, this.explodeNames(e, e[1]), e.constructCode(), true) ],
+                e => this.addOutput(e, e[1], true, 0) ],
             [ /^output\s+(@[a-zA-Z0-9_]+)\s*=\s*(.+)$/,
-                (e) => this.addOutput(e, this.explodeNames(e, e[1]), e.constructCode(`${e[1]} = ${e[2]}`), true) ],
+                e => this.addOutput(e, e[1], true, 0, `${e[1]} = ${e[2]}`) ],
+
             [ /^provide\s+([a-zA-Z0-9_,\s@#`]+)$/,
-                (e) => this.addOutput(e, this.explodeNames(e, e[1]), e.constructCode(), false) ],
+                e => this.addOutput(e, e[1], false, 0) ],
             [ /^provide\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
-                (e) => this.addOutput(e, this.explodeNames(e, e[1]), e.constructCode(`${e[1]} = ${e[2]}`), false) ],
-            [ /^override\s+([a-zA-Z0-9_,\s@#`]+)$/,
-                (e) => this.addOverride(e, this.explodeNames(e, e[1]), e.constructCode()) ],
-            [ /^override\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
-                (e) => this.addOverride(e, this.explodeNames(e, e[1]), e.constructCode(`${e[1]} = ${e[2]}`)) ],
+                e => this.addOutput(e, e[1], false, 0, `${e[1]} = ${e[2]}`) ],
+
+            [ /^default\s+([a-zA-Z0-9_,\s@#`]+)$/,
+                e => this.addOutput(e, e[1], true, -1) ],
             [ /^default\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
-                (e) => this.addOutput(e, this.explodeNames(e, e[1]), e.constructCode(`${e[1]} = ${e[2]}`), true, -1) ],
+                e => this.addOutput(e, e[1], true, -1, `${e[1]} = ${e[2]}`) ],
+
+            [ /^override\s+([a-zA-Z0-9_,\s@#`]+)$/,            
+                e => this.addOverride(e, e[1]) ],
+            [ /^override\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
+                e => this.addOverride(e, e[1], `${e[1]} = ${e[2]}`) ],
+
             [ /^init\s+([a-zA-Z0-9_,\s@#`]+)$/,
-                (e) => this.addInit(e, this.explodeNames(e, e[1]), e.constructCode()) ],
+                e => this.addInit(e, e[1]) ],
             [ /^init\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
-                (e) => this.addInit(e, this.explodeNames(e, e[1]), e.constructCode(`${e[1]} = ${e[2]}`)) ],
+                e => this.addInit(e, e[1], `${e[1]} = ${e[2]}`) ],
+
             [ /^finalize\s+([a-zA-Z0-9_,\s@#`]+)$/,
-                (e) => this.addFinalize(e, this.explodeNames(e, e[1]), e.constructCode()) ],
+                e => this.addFinalize(e, e[1]) ],
             [ /^finalize\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
-                (e) => this.addFinalize(e, this.explodeNames(e, e[1]), e.constructCode(`${e[1]} = ${e[2]}`)) ],
+                e => this.addFinalize(e, e[1], `${e[1]} = ${e[2]}`) ],
+
             [ /^state\s+(@[a-zA-Z0-9_]+)(#|`)\s*=\s*(.+)$/,
-                (e) => this.addState(e, this.explodeNames(e, e[1]), e[2], e.constructCode(`${e[1]}${e[2]} = ${m[3]}`)) ],
+                e => this.addState(e, e[1], e[2], `${e[1]}${e[2]} = ${e[3]}`) ],
             [ /^state\s+(@[a-zA-Z0-9_]+)(#|`)$/,
-                (e) => this.addState(e, this.explodeNames(e, e[1]), e[2], e.constructCode()) ],
+                e => this.addState(e, e[1], e[2]) ],
+
             [ /.*/,
-                (e) => { throw new MmdlError(e, "Syntax error."); } ]
+                e => { throw new MmdlError(e, "Syntax error."); } ]
         ];
         for (let entry of sub)
             entry.multiMatch(patterns);
     }
 
-    addState(entry, names, type, code)
+    addState(entry, name, type, inlineCode)
     {
-        let name = names[0];
+        let code = entry.constructCode(inlineCode);
         if (type == '`')
         {
             this.addExpression(entry, `   double ${name}\`;\r\n`)
@@ -92,8 +103,9 @@ class Class extends Template
             .unique();
     }
 
-    addVariable(entry, code, location)
+    addVariable(entry, location, inlineCode)
     {
+        let code = entry.constructCode(inlineCode);
         let provides = {};
         code.replace(/@[A-Za-z0-9_]+(\`#)?/g, m => provides[m] = true);
         this.addExpression(entry, code)
@@ -101,9 +113,10 @@ class Class extends Template
             .provides(Object.keys(provides));
     }
 
-    addOutput(entry, names, code, addLocal, priority)
+    addOutput(entry, names, addLocal, priority, inlineCode)
     {
-        priority = priority || 0;
+        let code = entry.constructCode(inlineCode);
+        names = this.explodeNames(entry, names);
         this.addExpression(entry, code)
             .provides(names)
             .requiresFromCode()
@@ -121,23 +134,29 @@ class Class extends Template
         }
     }
 
-    addOverride(entry, names, code)
+    addOverride(entry, names, inlineCode)
     {
+        let code = entry.constructCode(inlineCode);
+        names = this.explodeNames(entry, names);
         this.addExpression(entry, code)
             .overrides(names)
             .requiresFromCode();
     }
 
-    addInit(entry, names, code)
+    addInit(entry, names, inlineCode)
     {
+        let code = entry.constructCode(inlineCode);
+        names = this.explodeNames(entry, names);
         this.addExpression(entry, code)
             .init()
             .provides(names)
             .requiresFromCode();
     }
 
-    addFinalize(entry, names, code)
+    addFinalize(entry, names, inlineCode)
     {
+        let code = entry.constructCode(inlineCode);
+        names = this.explodeNames(entry, names);
         this.addExpression(entry, code)
             .finalize()
             .provides(names)
@@ -163,6 +182,15 @@ class Class extends Template
 
         return new ExpressionHelper(exp);
     }
+
+    explodeNames(entry, namesStr)
+    {
+        let list = namesStr.split(/\s*,\s*/);
+        for (let n of list)
+            if (!n.match(/^@[A-Za-z0-9_]+[#`]?$/))
+                throw new MmdlError(entry, 'Invalid name');
+        return list;
+    };
 
 };
 
@@ -203,6 +231,7 @@ class ExpressionHelper
         return this;
     }
 
+    location(l) { this.exp.location = l; return this; }
     struct() { this.exp.location = LocationType.Struct; return this; }
     local() { this.exp.location = LocationType.Local; return this; }
     init() { this.exp.location = LocationType.Init; return this; }
