@@ -65,17 +65,21 @@ class Class extends Template
                 .priority(-1)
                 .unique();
             this.addExpression(entry, code)
-                .provides(`${name}\``);
+                .provides(`${name}\``)
+                .requiresFromCode();
             this.addExpression(entry, `    ${name}# = ${name}\` * dt;\r\n`)
-                .provides(`${name}#`);
+                .provides(`${name}#`)
+                .requires(`${name}\``);
         }
         else
         {
             this.addExpression(entry, code)
-                .provides(`${name}#`);
+                .provides(`${name}#`)
+                .requiresFromCode();
         }
         this.addExpression(entry, `    ${name} = ${name}#;\r\n`)
-            .overrides(name);
+            .overrides(name)
+            .requires(`${name}#`);
         this.addExpression(entry, `   double ${name}#;\r\n`)
             .local()
             .provides(`${name}#`)
@@ -91,7 +95,7 @@ class Class extends Template
     addVariable(entry, code, location)
     {
         let provides = {};
-        code.replace(/@[A-Za-z0-9_](\`#)?+/g, m => provides[m] = true);
+        code.replace(/@[A-Za-z0-9_]+(\`#)?/g, m => provides[m] = true);
         this.addExpression(entry, code)
             .location(location)
             .provides(Object.keys(provides));
@@ -102,6 +106,7 @@ class Class extends Template
         priority = priority || 0;
         this.addExpression(entry, code)
             .provides(names)
+            .requiresFromCode()
             .priority(priority);
         if (addLocal)
         {
@@ -119,21 +124,24 @@ class Class extends Template
     addOverride(entry, names, code)
     {
         this.addExpression(entry, code)
-            .overrides(names);
+            .overrides(names)
+            .requiresFromCode();
     }
 
     addInit(entry, names, code)
     {
         this.addExpression(entry, code)
             .init()
-            .provides(names);
+            .provides(names)
+            .requiresFromCode();
     }
 
     addFinalize(entry, names, code)
     {
         this.addExpression(entry, code)
             .finalize()
-            .provides(names);
+            .provides(names)
+            .requiresFromCode();
     }
 
     addExpression(entry, code)
@@ -177,6 +185,21 @@ class ExpressionHelper
     {
         if (typeof(names) == 'string') names = [ names ];
         this.exp.overrides = this.exp.overrides.concat(names);
+        return this;
+    }
+
+    requiresFromCode()
+    {
+        let requires = {};
+        this.exp.code.replace(/@[A-Za-z0-9_]+(\`#)?/g, m => requires[m] = true);
+        this.exp.requires = this.exp.requires.concat(Object.keys(requires));
+        return this;
+    }
+
+    requires(names)
+    {
+        if (typeof(names) == 'string') names = [ names ];
+        this.exp.requires = this.exp.requires.concat(names);
         return this;
     }
 
