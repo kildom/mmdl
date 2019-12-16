@@ -17,6 +17,9 @@ class Template
         this.templateName = name;
         this.loc = entry.loc;
         this.expressions = [];
+        this.inputs = {};
+        this.outputs = {};
+        this.signals = {};
     }
 
 };

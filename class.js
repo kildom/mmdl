@@ -23,20 +23,26 @@ class Class extends Template
             [ /^local\s+(.+)$/,
                 e => this.addVariable(e, LocationType.Local, e[1]) ],
 
+            [ /^input\s+([a-zA-Z0-9_,\s@]+)$/,
+                e => this.addInput(e, e[1]) ],
+
             [ /^output\s+([a-zA-Z0-9_,\s@]+)$/,
-                e => this.addOutput(e, e[1], true, 0) ],
+                e => this.addOutput(e, e[1]) ],
             [ /^output\s+(@[a-zA-Z0-9_]+)\s*=\s*(.+)$/,
-                e => this.addOutput(e, e[1], true, 0, `${e[1]} = ${e[2]}`) ],
+                e => this.addOutput(e, e[1], `${e[1]} = ${e[2]}`) ],
+
+            [ /^provide\s+(always|init|finalize)$/,
+                e => this.addProvideAlways(e, e[1]) ],
 
             [ /^provide\s+([a-zA-Z0-9_,\s@#`]+)$/,
-                e => this.addOutput(e, e[1], false, 0) ],
+                e => this.addProvide(e, e[1]) ],
             [ /^provide\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
-                e => this.addOutput(e, e[1], false, 0, `${e[1]} = ${e[2]}`) ],
-
+                e => this.addProvide(e, e[1], `${e[1]} = ${e[2]}`) ],
+            
             [ /^default\s+([a-zA-Z0-9_,\s@#`]+)$/,
-                e => this.addOutput(e, e[1], true, -1) ],
+                e => this.addDefault(e, e[1]) ],
             [ /^default\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
-                e => this.addOutput(e, e[1], true, -1, `${e[1]} = ${e[2]}`) ],
+                e => this.addDefault(e, e[1], `${e[1]} = ${e[2]}`) ],
 
             [ /^override\s+([a-zA-Z0-9_,\s@#`]+)$/,            
                 e => this.addOverride(e, e[1]) ],
@@ -113,25 +119,71 @@ class Class extends Template
             .provides(Object.keys(provides));
     }
 
-    addOutput(entry, names, addLocal, priority, inlineCode)
+    addInput(entry, names)
+    {
+        if (entry.sub.length > 0)
+            throw new MmdlError(entry.sub[0], "Unexpected code");
+        names = this.explodeNames(entry, names);
+        for (let n of names)
+            this.inputs[n] = true;
+    }
+
+    addOutput(entry, names, inlineCode)
     {
         let code = entry.constructCode(inlineCode);
         names = this.explodeNames(entry, names);
         this.addExpression(entry, code)
             .provides(names)
-            .requiresFromCode()
-            .priority(priority);
-        if (addLocal)
+            .requiresFromCode();
+        for (let n of names)
         {
-            for (let n of names)
-            {
-                this.addExpression(entry, `    double ${n};\r\n`)
-                    .local()
-                    .provides(n)
-                    .priority(-1)
-                    .unique();
-            }
+            this.addExpression(entry, `    double ${n};\r\n`)
+                .local()
+                .provides(n)
+                .priority(-1)
+                .unique();
+            this.outputs[n] = true;
         }
+    }
+
+    addProvide(entry, names, inlineCode)
+    {
+        let code = entry.constructCode(inlineCode);
+        names = this.explodeNames(entry, names);
+        this.addExpression(entry, code)
+            .provides(names)
+            .requiresFromCode();
+    }
+
+    addProvideAlways(entry, type)
+    {
+        let code = entry.constructCode();
+        let tr = {
+            always: LocationType.Step,
+            init: LocationType.Init,
+            finalize: LocationType.Finalize
+        };
+        this.addExpression(entry, code)
+            .always(tr[type])
+            .requiresFromCode();
+    }
+    
+    addDefault(entry, names, inlineCode)
+    {
+        let code = entry.constructCode(inlineCode);
+        names = this.explodeNames(entry, names);
+        if (names.length > 1)
+            throw new MmdlError(entry, "Only one default allowed!")
+        this.addExpression(entry, code)
+            .provides(names)
+            .requiresFromCode()
+            .priority(-1);
+        this.addExpression(entry, `    double ${names[0]};\r\n`)
+            .local()
+            .provides(names[0])
+            .priority(-1)
+            .unique();
+        this.inputs[names[0]] = false;
     }
 
     addOverride(entry, names, inlineCode)
@@ -175,6 +227,7 @@ class Class extends Template
             priority: 0,
             unique: false,
             valid: true,
+            always: false,
             code: code
         };
 
@@ -231,6 +284,7 @@ class ExpressionHelper
         return this;
     }
 
+    always(l) { this.exp.always = l; return this; }
     location(l) { this.exp.location = l; return this; }
     struct() { this.exp.location = LocationType.Struct; return this; }
     local() { this.exp.location = LocationType.Local; return this; }

@@ -1,3 +1,23 @@
 
-class Test
-    output @x = 12;
+class Iner1rz
+    input @U
+    state @x` = @K1 * (@U - @x)
+    output @y = @K * @x
+    default @K = 1
+    default @K1 = 1
+
+class In
+    output @x = 12
+
+class Out
+    input @x
+    provide always
+        doSomeWith(@x)
+
+In
+Out
+
+Iner1rz : Iner1rz
+    U <- In
+    y -> Out
+    K = 2
