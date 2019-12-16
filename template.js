@@ -1,7 +1,4 @@
 
-const { MmdlError } = require('./utils.js');
-
-
 const LocationType = {
     Struct: 'struct',
     Local: 'local',
