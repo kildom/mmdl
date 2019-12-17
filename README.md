@@ -191,5 +191,65 @@ override @counter = @counter + 1;
 ```
 
 ### init
+
+```
+init name = value
+```
+
+```
+init names
+    code
+```
+
+Provides code that will be placed into simulation initialization function to initialize state structure.
+
+Example:
+```
+init @x = @x0
+init @buffer, @len
+    @len = 1024;
+    @buffer = malloc(@len);
+
+```
+
 ### finalize
+
+```
+finalize names
+    code
+```
+
+Provides code that will be placed into simulation finalization function to free resources from state structure.
+
+Example:
+```
+finalize @buffer
+    free(@buffer);
+
+```
+
 ### state
+
+```
+state name` = value
+state name# = value
+```
+
+```
+state name`
+    code
+state name#
+    code
+```
+
+Simplyfied method of providing state of the object. It will automatically create field in state structure and place code to update with new value.
+
+Version with `` ` `` defines differential of this state variable. Code to calculate next value will be automatically placed after it (using Euler method). And the result placed into variabled ended with `#`.
+
+Version with `#` defines next value of this state variable.
+
+Example:
+```
+state @x` = @U - @x;
+```
+
