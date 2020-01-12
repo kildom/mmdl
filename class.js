@@ -43,6 +43,10 @@ class Class extends Template
                 e => this.addDefault(e, e[1]) ],
             [ /^default\s+(@[a-zA-Z0-9_]+[#`]?)\s*=\s*(.+)$/,
                 e => this.addDefault(e, e[1], `${e[1]} = ${e[2]}`) ],
+            [ /^default\s+(.*?)(@[a-zA-Z0-9_]+[#`]?)(.*?)=\s*(.+)$/,
+                e => this.addDefault(e, e[2], `${e[2]} = ${e[4]}`, e[1], e[3]) ],
+            [ /^default\s+(.*?)(@[a-zA-Z0-9_]+[#`]?)(.+)$/,
+                e => this.addDefault(e, e[2], null, e[1], e[3]) ],
 
             [ /^override\s+([a-zA-Z0-9_,\s@#`]+)$/,            
                 e => this.addOverride(e, e[1]) ],
@@ -164,7 +168,7 @@ class Class extends Template
             .requiresFromCode();
     }
     
-    addDefault(entry, names, inlineCode)
+    addDefault(entry, names, inlineCode, typeBefore, typeAfter)
     {
         let code = entry.constructCode(inlineCode);
         names = this.explodeNames(entry, names);
@@ -174,10 +178,20 @@ class Class extends Template
             .provides(names)
             .requiresFromCode()
             .weak();
-        this.addExpression(entry, `    double ${names[0]};\r\n`)
-            .local()
-            .provides(names[0])
-            .weak();
+        if (typeBefore)
+        {
+            this.addExpression(entry, `    ${typeBefore}${names[0]}${typeAfter};\r\n`)
+                .local()
+                .provides(names[0])
+                .weak();
+        }
+        else
+        {
+            this.addExpression(entry, `    double ${names[0]};\r\n`)
+                .local()
+                .provides(names[0])
+                .weak();
+        }
         this.inputs[names[0]] = false;
     }
 
