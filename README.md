@@ -158,8 +158,7 @@ default name = value
 ```
 
 ```
-default names
-    code
+default type name = value
 ```
 
 Provides default code for inputs. If input is not connected then this code will be used to calculate value of the input.
