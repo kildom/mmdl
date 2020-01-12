@@ -79,8 +79,7 @@ class Class extends Template
             this.addExpression(entry, `   double ${name}\`;\r\n`)
                 .local()
                 .provides(`${name}\``)
-                .priority(-1)
-                .unique();
+                .weak();
             this.addExpression(entry, code)
                 .provides(`${name}\``)
                 .requiresFromCode();
@@ -100,13 +99,11 @@ class Class extends Template
         this.addExpression(entry, `   double ${name}#;\r\n`)
             .local()
             .provides(`${name}#`)
-            .priority(-1)
-            .unique();
+            .weak();
         this.addExpression(entry, `   double ${name};\r\n`)
             .struct()
             .provides(`${name}`)
-            .priority(-1)
-            .unique();
+            .weak();
     }
 
     addVariable(entry, location, inlineCode)
@@ -140,8 +137,7 @@ class Class extends Template
             this.addExpression(entry, `    double ${n};\r\n`)
                 .local()
                 .provides(n)
-                .priority(-1)
-                .unique();
+                .weak();
             this.outputs[n] = true;
         }
     }
@@ -177,12 +173,11 @@ class Class extends Template
         this.addExpression(entry, code)
             .provides(names)
             .requiresFromCode()
-            .priority(-1);
+            .weak();
         this.addExpression(entry, `    double ${names[0]};\r\n`)
             .local()
             .provides(names[0])
-            .priority(-1)
-            .unique();
+            .weak();
         this.inputs[names[0]] = false;
     }
 
@@ -224,9 +219,7 @@ class Class extends Template
             provides: [],
             overrides: [],
             requires: [],
-            priority: 0,
-            unique: false,
-            valid: true,
+            weak: false,
             always: false,
             code: code
         };
@@ -292,9 +285,7 @@ class ExpressionHelper
     finalize() { this.exp.location = LocationType.Finalize; return this; }
     step() { this.exp.location = LocationType.Step; return this; }
 
-    priority(level) { this.exp.priority = level; return this; }
-    
-    unique() { this.exp.unique = true; return this; }
+    weak() { this.exp.weak = true; return this; }
 };
 
 
