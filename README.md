@@ -23,18 +23,177 @@ Defined submodel can be later used exactly the same as class.
 ## Model syntax
 
 ### class
+
+```
+class name
+    definition
+```
+
+Creates new class inside this model. See **Class syntax**.
+
+Example:
+```
+class Pow2
+    input @X
+    output @Y = @X * @X
+```
+
 ### model
+
+```
+model name
+    definition
+```
+
+Creates new model inside this model (sub-model). See **Model syntax**.
+
+Example:
+```
+model Pow6
+    input X
+    output Y
+    first : Pow2
+        X <- X
+    second : Pow2
+        X = @a.Y * @X
+        Y -> Y
+```
+
 ### signal
+
+```
+signal name
+```
+```
+signal name connection
+```
+
+Create a new signal. It allows adding named connection between objects. See object connection for more details about connections.
+
+Example:
+```
+signal temperature <- Heating.Y
+signal power
+Heating
+    X <- power
+```
+
 ### Object creation
+
+```
+Class_or_model_name
+    connections
+```
+```
+name : Class_or_model_name
+    connections
+```
+
+Create a new object - instance of a class or a model.
+Form without a name will produce object with a name the same as a class or a model.
+
+Example:
+```
+heater : HeatingObject
+    X <- power
+    Y -> scope.X1
+```
+
+#### Object connections
+
+Object's inputs/outputs can be connected.
+On the left side is always a name of input/output of current object.
+Next is an arrow `<-` for inputs or `->` for outputs.
+On the right side is an other end of the connection which can be:
+
+* a signal, e.g.:
+   ```
+   X <- temperature
+   ```
+* an other object's input/output, e.g.:
+   ```
+   Y -> scope.X1
+   ```
+* if an other object have just one input or output then its name can be skipped, e.g.:
+   ```
+   inv1 : Inverter
+   heater : HeatingObject
+       X <- inv1
+   ```
+* inline object creation, e.g.
+  ```
+  heater : HeatingObject
+      X <- : Inverter
+          X <- obj.Y
+  ```
+
+Object's inputs can be connected to an expression using the `=` character instead of arrow.
+Expression on the right side can access signals and other object's outputs by prefixing it with the `@` character.
+
+Example:
+```
+Delay
+    T = 12
+    X = 2 * @obj1.Y + @obj2.Y
+```
+
+Type of the expression is deduced from a type of input's default value if provided. `double` is assumed if input has no default value.
+
+TODO: inputs default type without value
+
 ### input (only submodel)
+
+```
+input name
+```
+```
+input name connection
+```
+
+Defines a signal that is an input of the model.
+
+Example:
+```
+input X -> heater.X
+```
+
 ### output (only submodel)
+
+```
+output name
+```
+```
+output name connection
+```
+
+Defines a signal that is an output of the model.
+
+Example:
+```
+output temperature -> heater.Y
+```
+
 ### default (only submodel)
+
+```
+default input_name = expression
+```
+```
+default type input_name = expression
+```
+
+Assigns a default value to an input.
+
+Example:
+```
+default K = 12
+```
 
 ## Class syntax
 
 All symbols defined by the class must be prefixed with `@` character.
 During generation of C file this character will be replaced by some prefix to avoid collisions with other objects.
-`@` character is also used to findout what symbols specific code is using.
+`@` character is also used to find out what symbols specific code is using.
 Postfix `` ` `` or `#` can be used to indicate that this symbol contains differetial or a value for the next simulation step.
 
 ### struct
